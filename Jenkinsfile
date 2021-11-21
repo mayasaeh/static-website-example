@@ -5,7 +5,7 @@ pipeline {
         IMAGE_TAG = "${BUILD_TAG}"
         CONTAINER_NAME = "static-website"
         DOCKERHUB_PASSWORD = credentials('dockerhub_password')
-        PRODUCTION_HOST = "3.95.209.58"
+        PROD_HOST = "52.202.78.159"
     }
     agent none
 
@@ -32,8 +32,13 @@ pipeline {
                 }
                 script {
                     sh '''
-                        docker run -d --name ${CONTAINER_NAME} -p 30001:80 ${IMAGE_NAME}:${IMAGE_TAG}
+                        docker run -d --name ${CONTAINER_NAME} -p 8081:80 ${IMAGE_NAME}:${IMAGE_TAG}
                         sleep 5
+                    '''
+                }
+                script {
+                    sh '''
+                        curl localhost:8081 | grep -q "Contact"
                     '''
                 }
             }
@@ -89,6 +94,14 @@ pipeline {
                     sh '''
                         sudo docker run -d --name ${CONTAINER_NAME} -p 8080:80 ${IMAGE_NAME}:${IMAGE_TAG}
                     '''
+                }
+                catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+                    script {
+                        sh '''
+                            curl http://localhost:8080 | grep -q "Contact"
+                            curl http://${PROD_HOST}:8080 | grep -q "Contact"
+                        '''
+                    }
                 }
             }
         }
